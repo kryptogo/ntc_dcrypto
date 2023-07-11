@@ -22,11 +22,13 @@ library ntcdcrypto;
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+
 import "package:hex/hex.dart";
 
 class SSS {
-  final BigInt prime =
-      BigInt.parse("115792089237316195423570985008687907853269984665640564039457584007913129639747", radix: 10);
+  final BigInt prime = BigInt.parse(
+      "115792089237316195423570985008687907853269984665640564039457584007913129639747",
+      radix: 10);
   var rand = Random.secure();
 
   /// 16bit, because random.nextInt() only supports (2^32)-1 possible values.
@@ -138,7 +140,8 @@ class SSS {
       int count = (hexData.length / 64.0).ceil();
       for (int i = 0; i < count; i++) {
         if ((i + 1) * 64 < hexData.length) {
-          BigInt bi = BigInt.parse(hexData.substring(i * 64, (i + 1) * 64), radix: 16);
+          BigInt bi =
+              BigInt.parse(hexData.substring(i * 64, (i + 1) * 64), radix: 16);
           rs.add(bi);
         } else {
           String last = hexData.substring(i * 64, hexData.length);
@@ -239,7 +242,9 @@ class SSS {
     //
     // points[shares][parts][2]
     var points = List<List<List<BigInt>>>.generate(
-        shares.length, (i) => List<List<BigInt>>.generate(parts, (j) => List<BigInt>.generate(2, (k) => BigInt.zero)));
+        shares.length,
+        (i) => List<List<BigInt>>.generate(
+            parts, (j) => List<BigInt>.generate(2, (k) => BigInt.zero)));
 
     // For each share...
     for (int i = 0; i < shares.length; i++) {
@@ -299,7 +304,9 @@ class SSS {
     //
     // points[shares][parts][2]
     var points = List<List<List<BigInt>>>.generate(
-        shares.length, (i) => List<List<BigInt>>.generate(parts, (j) => List<BigInt>.generate(2, (k) => BigInt.zero)));
+        shares.length,
+        (i) => List<List<BigInt>>.generate(
+            parts, (j) => List<BigInt>.generate(2, (k) => BigInt.zero)));
 
     // For each share...
     for (int i = 0; i < shares.length; i++) {
@@ -357,8 +364,8 @@ class SSS {
     //
     // polynomial[parts][minimum]
     // BigInt[][] polynomial = new BigInt[secrets.size()][minimum];
-    var polynomial =
-        List<List<BigInt>>.generate(secrets.length, (i) => List<BigInt>.generate(minimum, (j) => BigInt.zero));
+    var polynomial = List<List<BigInt>>.generate(secrets.length,
+        (i) => List<BigInt>.generate(minimum, (j) => BigInt.zero));
     for (int i = 0; i < secrets.length; i++) {
       polynomial[i][0] = secrets[i];
       for (int j = 1; j < minimum; j++) {
@@ -408,16 +415,49 @@ class SSS {
     return rs;
   }
 
+  String combine(
+    List<String> shares,
+    bool isBase64,
+  ) {
+    final secrets =
+        calcShareKeyFromPosition(shares, isBase64, position: BigInt.zero);
+    // recover secret string.
+    return mergeBigIntToString(secrets);
+  }
+
+  String getNewShareKeyFromShares(
+    List<String> shares,
+    bool isBase64,
+  ) {
+    BigInt position = randomNumber();
+
+    while (position == BigInt.zero) {
+      position = randomNumber();
+    }
+
+    final shareKey = calcShareKeyFromPosition(
+      shares,
+      isBase64,
+      position: position,
+    );
+
+    final share =
+        '${toHex(position)}${toHex(shareKey[0])}${toHex(position)}${toHex(shareKey[1])}';
+    return share;
+  }
+
   /// Takes a string array of shares encoded in Base64 or Hex created via Shamir's Algorithm
   /// Note: the polynomial will converge if the specified minimum number of shares
   ///       or more are passed to this function. Passing thus does not affect it
   ///       Passing fewer however, simply means that the returned secret is wrong.
-  String combine(List<String> shares, bool isBase64) {
-    String rs = "";
+  List<BigInt> calcShareKeyFromPosition(
+    List<String> shares,
+    bool isBase64, {
+    BigInt? position,
+  }) {
     if (shares.isEmpty) {
       throw new Exception("shares is NULL or empty");
     }
-
     // Recreate the original object of x, y points, based upon number of shares
     // and size of each share (number of parts in the secret).
     //
@@ -450,7 +490,7 @@ class SSS {
             // combine them via half products
             // x=0 ==> [(0-bx)/(ax-bx)] * ...
             BigInt bx = points[k][j][0]; // bx
-            BigInt negbx = -bx; // (0-bx)
+            BigInt negbx = position! - bx; // (0-bx)
             BigInt axbx = ax - bx; // (ax-bx)
             numerator = (numerator * negbx) % prime; // (0-bx)*...
             denominator = (denominator * axbx) % prime; // (ax-bx)*...
@@ -469,8 +509,6 @@ class SSS {
       }
     }
 
-    // recover secret string.
-    rs = mergeBigIntToString(secrets);
-    return rs;
+    return secrets;
   }
 }
