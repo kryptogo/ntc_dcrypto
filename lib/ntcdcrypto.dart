@@ -425,7 +425,7 @@ class SSS {
     return mergeBigIntToString(secrets);
   }
 
-  String getNewShareKeyFromShares(
+  String _getRandomShareKeyFromShares(
     List<String> shares,
     bool isBase64,
   ) {
@@ -443,6 +443,19 @@ class SSS {
 
     final share =
         '${toHex(position)}${toHex(shareKey[0])}${toHex(position)}${toHex(shareKey[1])}';
+    return share;
+  }
+
+  String getNewShareKeyFromShares(
+    List<String> shares,
+    bool isBase64,
+  ) {
+    String share = _getRandomShareKeyFromShares(shares, isBase64);
+
+    while (shares.contains(share)) {
+      share = _getRandomShareKeyFromShares(shares, isBase64);
+    }
+
     return share;
   }
 
