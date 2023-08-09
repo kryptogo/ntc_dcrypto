@@ -178,8 +178,6 @@ class SSS {
       }
       hexData = hexData + tmp;
     }
-    hexData = trimRight(hexData);
-    //print(hexData);
     rs = utf8.decode(HEX.decode(hexData));
     return rs;
   }
